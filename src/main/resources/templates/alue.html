@@ -2,47 +2,50 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
 
     <head>
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" />
         <title>Keskustelut</title>
         <!--        <meta charset="UTF-8"></meta>-->
         <meta charset="utf-8" />
-        <link rel="stylesheet" type="text/css" href="/styles.css"/>
+        <link rel="stylesheet" type="text/css" href="/styles.css" />
     </head>
 
     <body>
-        <nav><a href="/">Etusivu</a> > <span th:text="${alue.nimi}">Alueen nimi</span><br/></nav>
 
-        <h2>Alueen <span th:text="${alue.nimi}">Alueen nimi</span> keskustelut</h2>
+        <div id="container">
+            <nav><a  href="/">Etusivu</a> > <span th:text="${alue.nimi}">Alueen nimi</span><br/></nav>
 
-        <ul>
+            <h2>Alueen '<span th:text="${alue.nimi}">Alueen nimi</span>' keskustelut</h2>
 
-            <!-- TIETOKANNASTA DATAA
-                       
-            -->           
-            <li th:each="keskustelu: ${keskustelut}">
+            <ul>
 
-                <a th:href="${'/keskustelu/' + keskustelu.id}">
-                    <span th:text="${keskustelu.otsikko} + '  --  '">Helsinki on paras</span>
-                    <span th:text="'Viestej&auml;: ' + ${keskustelu.viestienLkm} + ' - '">Viestien lukumäärä</span>
-                    <span th:text="'Viimeisin viesti l&auml;hetetty: ' + ${keskustelu.viimeisinAika}">Viimeisimmän viestin aika</span> 
-                </a>
+                <!-- TIETOKANNASTA DATAA
+                           
+                -->           
+                <li th:each="keskustelu: ${keskustelut}">
 
-            </li>
+                    <a class="keskusteluotsikko" th:href="${'/keskustelu/' + keskustelu.id}">
+                        <span class="otsikko" th:text="${keskustelu.otsikko}">Helsinki on paras</span>
+                        <span class="otsikko_metadata" th:text="'Viestej&auml;: ' + ${keskustelu.viestienLkm} + ' - '">Viestejä: 2</span>
+                        <span class="otsikko_metadata" th:text="'Viimeisin viesti l&auml;hetetty: ' + ${keskustelu.viimeisinAika}">Viimeisin viesti lähetetty: 23.10.2016</span> 
+                    </a>
 
-        </ul>
-        <span th:if="${kaikki} == 0">N&auml;ytet&auml;&auml;n kymmenen uusinta keskustelua. <a th:href="${'/alue/' + alue.id} + '?kaikki=1'">N&auml;yt&auml; kaikki</a></span>
-        <span th:if="${kaikki} == 1">N&auml;ytet&auml;&auml;n kaikki alueen keskustelut. <a th:href="${'/alue/' + alue.id} + '?kaikki=0'">N&auml;yt&auml; vain uusimmat</a></span>
+                </li>
 
-        <hr/>
-        <h4>Luo uusi keskustelunavaus</h4>
-        <form method="post">
-            <b>Nimimerkki</b>
-            <input type="text" name="nimi"/>
-            <b>Otsikko</b>
-            <input type="text" name="otsikko" size="40"/>
-            <b>Viesti</b>
-            <textarea rows="5" cols="50" name="sisalto"></textarea>
-            <input type="submit" value="L&auml;het&auml;"/>
-        </form>       
+            </ul>
+            <a th:if="${kaikki} == 0" th:href="${'/alue/' + alue.id} + '?kaikki=1'"><span id="uusialue">N&auml;ytet&auml;&auml;n kymmenen uusinta keskustelua. N&auml;yt&auml; kaikki</span></a>
+            <a th:if="${kaikki} == 1" th:href="${'/alue/' + alue.id} + '?kaikki=0'"><span id="uusialue">N&auml;ytet&auml;&auml;n kaikki alueen keskustelut. N&auml;yt&auml; vain uusimmat</span></a>
 
+            <hr/>
+            <h4>Luo uusi keskustelunavaus</h4>
+            <form method="post">
+                <b>Nimimerkki</b>
+                <input type="text" name="nimi"/>
+                <b>Otsikko</b>
+                <input type="text" name="otsikko" size="40" required=""/>
+                <b>Viesti</b>
+                <textarea rows="5" cols="50" name="sisalto" required=""></textarea>
+                <input type="submit" value="L&auml;het&auml;"/>
+            </form>       
+        </div>
     </body>
 </html>

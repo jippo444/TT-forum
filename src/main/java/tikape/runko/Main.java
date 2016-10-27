@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.thymeleaf.templateresolver.TemplateResolver;
 import spark.ModelAndView;
 import spark.Request;
 import spark.Response;
@@ -61,24 +60,15 @@ public class Main {
         }, new ThymeleafTemplateEngine());
 
         Spark.post("/uusialue", (req, res) -> {
-            if (req.queryParams("nimi").isEmpty()) {
-                return "<!DOCTYPE html>"
-                        + "<head><meta charset='utf-8'/><title>Virhe lisäämisessä</title>"
-                        + "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles.css\"/></head>"
-                        + "<body><h1>Alueen nimi ei voi olla tyhjä.</h1>"
-                        + "<a href='/uusialue'> Takaisin alueen lisäämiseen</a></body></html>";
+            if (req.queryParams("nimi").trim().isEmpty()) {
+                return virheilmoitus("/uusialue", "Takaisin alueen lisäämiseen", "Alueen nimi ei voi olla tyhjä");
             }
             try {
                 alueDao.lisaaAlue(req.queryParams("nimi"));
             } catch (Exception e) {
-                return "<!DOCTYPE html>"
-                        + "<head><meta charset='utf-8'/><title>Virhe lisäämisessä</title>"
-                        + "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles.css\"/></head>"
-                        + "<body><h1>Jokin meni pieleen :/ Alueen nimi saa olla korkeintaan 100 merkkiä pitkä.</h1>"
-                        + "<a href='/uusialue'> Takaisin alueen lisäämiseen</a></body></html>";
-
+                return virheilmoitus("/uusialue", "Takaisin alueen lisäämiseen",
+                        "Jokin meni pieleen :/ Alueen nimi saa olla korkeintaan 100 merkkiä pitkä.");
             }
-
             res.redirect("/");
             return "";
         });
@@ -141,13 +131,10 @@ public class Main {
         }, new ThymeleafTemplateEngine());
 
         Spark.post("alue/:id", (req, res) -> {
-            if (req.queryParams("sisalto").isEmpty()
+            if (req.queryParams("sisalto").trim().isEmpty()
                     || req.queryParams("otsikko").isEmpty()) {
-                return "<!DOCTYPE html>"
-                        + "<head><meta charset='utf-8'/><title>Virhe lisäämisessä</title>"
-                        + "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles.css\"/></head>"
-                        + "<body><h1>Ei tyhjiä viestejä tai keskusteluja ilman otsikkoa, kiitos.</h1>"
-                        + "<a href='/alue/" + req.params("id") + "'> Takaisin alueelle</a></body></html>";
+                return virheilmoitus("/alue/" + req.params("id"), "Takaisin alueelle",
+                        "Ei tyhjiä viestejä tai keskusteluja ilman otsikkoa, kiitos.");
             }
             int id = -1;
             try {
@@ -162,7 +149,8 @@ public class Main {
             try {
                 keskusteluDao.lisaaKeskustelunavaus(id, otsikko, nimi, sisalto);
             } catch (Exception e) {
-                return "Jokin meni vikaan :/. Nimierkki ja keskustelun otsikko saavat olla korkeintaan 100 merkkiä pitkiä";
+                return virheilmoitus("/alue/" + req.params("id"), "Takaisin keskustelun lisäämiseen",
+                        "Jokin meni vikaan :/. Nimierkki ja keskustelun otsikko saavat olla korkeintaan 100 merkkiä pitkiä");
             }
 
             res.redirect("/alue/" + id);
@@ -171,19 +159,16 @@ public class Main {
         });
 
         Spark.post("keskustelu/:id", (req, res) -> {
-            int nykyinen_sivu = 1;
+//            int nykyinen_sivu = 1;
 
-            try {
-                nykyinen_sivu = Integer.parseInt(req.queryParams("nykyinen_sivu"));
-            } catch (Exception e) {
-            }
+//            try {
+//                nykyinen_sivu = Integer.parseInt(req.queryParams("nykyinen_sivu"));
+//            } catch (Exception e) {
+//            }
 
-            if (req.queryParams("sisalto").isEmpty()) {
-                return "<!DOCTYPE html>"
-                        + "<head><meta charset='utf-8'/><title>Virhe lisäämisessä</title>"
-                        + "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles.css\"/></head>"
-                        + "<body><h1>Ei tyhjiä viestejä, kiitos.</h1>"
-                        + "<a href='/keskustelu/" + req.params("id") + "'> Takaisin keskusteluun</a></body></html>";
+            if (req.queryParams("sisalto").trim().isEmpty()) {
+                return virheilmoitus("/keskustelu/" + req.params("id"), "Takaisin viestin lisäämiseen",
+                        "Ei tyhjiä viestejä, kiitos.");
             }
 
             try {
@@ -191,7 +176,7 @@ public class Main {
             } catch (Exception e) {
                 return "Jokin meni pieleen.. :(";
             }
-            res.redirect("/keskustelu/" + req.params("id") + "?page=" + nykyinen_sivu);
+            res.redirect("/keskustelu/" + req.params("id") + "?page=viimeinen");
 
             return "OK";
         });
@@ -222,10 +207,20 @@ public class Main {
 
             List<Viesti> list = new ArrayList();
             int sivunumero = 1;
+
             try {
                 sivunumero = Integer.parseInt(req.queryParams("page"));
             } catch (Exception e) {
+                if (req.queryParams("page") != null && req.queryParams("page").equals("viimeinen")) {
+                    Integer keskustelunpituus = viestiDao.findKeskustelunViestitKaikki(keskustelu_id).size();
+                    if (keskustelunpituus % viestienLkmSivulla == 0) {
+                        sivunumero = keskustelunpituus / viestienLkmSivulla;
+                    } else {
+                        sivunumero = ((keskustelunpituus - (keskustelunpituus % viestienLkmSivulla)) / viestienLkmSivulla) + 1;
+                    }
+                }
             }
+
             try {
                 list.addAll(viestiDao.findKeskustelunViestitSivullinenPlusYlimaaraiset(keskustelu_id, sivunumero, viestienLkmSivulla, 1));
             } catch (Exception e) {
@@ -254,5 +249,13 @@ public class Main {
             return model;
         }, new ThymeleafTemplateEngine());
 
+    }
+
+    public static String virheilmoitus(String paluuosoite, String paluulinkinTeksti, String virheteksti) {
+        return "<!DOCTYPE html>"
+                + "<head><meta charset='utf-8'/><title>Virhe lisäämisessä</title>"
+                + "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles.css\"/></head>"
+                + "<body><h2>" + virheteksti + "</h2>"
+                + "<a href='" + paluuosoite + "'>" + paluulinkinTeksti + "</a></body></html>";
     }
 }
