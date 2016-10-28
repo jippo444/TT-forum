@@ -43,9 +43,7 @@ public class Main {
         int viestienLkmSivulla = 10;
 
         Spark.get("/", (req, res) -> {
-            List<Alue> list = new ArrayList<>();
-
-            list.addAll(alueDao.findEtusivunAlueet());
+            List<Alue> list = alueDao.findEtusivunAlueet();
 
             HashMap map = new HashMap();
             map.put("alueet", list);
@@ -74,9 +72,7 @@ public class Main {
         });
 
         Spark.get("alue/:id", (req, res) -> {
-            boolean redirect = false;
-
-            List<Keskustelu> list = new ArrayList<>();
+            List<Keskustelu> list;
             HashMap map = new HashMap();
             int id = 1;
             int kaikki = 0;
@@ -89,17 +85,17 @@ public class Main {
                 id = Integer.parseInt(req.params("id"));
             } catch (Exception e) {
                 res.redirect("/");
-                redirect = true;
+                return new ModelAndView(new HashMap(), "uusialue");
             }
 
             try {
                 if (kaikki == 1) {
-                    list.addAll(keskusteluDao.findAlueenKeskustelutKaikki(id));
+                    list = keskusteluDao.findAlueenKeskustelutKaikki(id);
                     if (list.size() > 10) {
                         map.put("kaikki", 1);
                     }
                 } else {
-                    list.addAll(keskusteluDao.findAlueenKeskustelutUusimmat(id));
+                    list = keskusteluDao.findAlueenKeskustelutUusimmat(id);
                     if (list.size() == 11) {
                         list.remove(10);
                         map.put("kaikki", 0);
@@ -107,13 +103,9 @@ public class Main {
                         map.put("kaikki", -1);
                     }
                 }
-
             } catch (Exception e) {
-                if (!redirect) {
-                    res.redirect("/");
-                    redirect = true;
-                }
-
+                res.redirect("/");
+                return new ModelAndView(new HashMap(), "uusialue");
             }
 
             map.put("keskustelut", list);
@@ -121,10 +113,8 @@ public class Main {
                 map.put("alue", alueDao.findOne(id));
             } catch (Exception e) {
                 map.put("alue", new Alue(-5, "Virhe"));
-                if (!redirect) {
-                    res.redirect("/");
-                    redirect = true;
-                }
+                res.redirect("/");
+                return new ModelAndView(new HashMap(), "uusialue");
             }
 
             return new ModelAndView(map, "alue");
@@ -165,7 +155,6 @@ public class Main {
 //                nykyinen_sivu = Integer.parseInt(req.queryParams("nykyinen_sivu"));
 //            } catch (Exception e) {
 //            }
-
             if (req.queryParams("sisalto").trim().isEmpty()) {
                 return virheilmoitus("/keskustelu/" + req.params("id"), "Takaisin viestin lisäämiseen",
                         "Ei tyhjiä viestejä, kiitos.");
@@ -182,30 +171,18 @@ public class Main {
         });
 
         Spark.get("keskustelu/:id", (Request req, Response res) -> {
-            boolean redirect = false;
             int keskustelu_id = 1;
 
             try {
                 keskustelu_id = Integer.parseInt(req.params("id"));
             } catch (Exception e) {
                 res.redirect("/");
-                redirect = true;
+                return new ModelAndView(new HashMap(), "uusialue");
             }
 
             Map map = new HashMap();
-            try {
-                map.put("keskustelu", keskusteluDao.findOne(keskustelu_id));
-                map.put("alue", alueDao.findOne(keskusteluDao.findOne(keskustelu_id).getAlue().getId()));
-            } catch (Exception e) {
-                map.put("keskustelu", new Keskustelu(-5, "Virhe"));
-                map.put("alue", new Alue(-5, "Virhe"));
-                if (!redirect) {
-                    res.redirect("/");
-                    redirect = true;
-                }
-            }
 
-            List<Viesti> list = new ArrayList();
+            List<Viesti> list;
             int sivunumero = 1;
 
             try {
@@ -222,18 +199,24 @@ public class Main {
             }
 
             try {
-                list.addAll(viestiDao.findKeskustelunViestitSivullinenPlusYlimaaraiset(keskustelu_id, sivunumero, viestienLkmSivulla, 1));
+                list = viestiDao.findKeskustelunViestitSivullinenPlusYlimaaraiset(keskustelu_id, sivunumero, viestienLkmSivulla, 1);
             } catch (Exception e) {
-                list.add(new Viesti(-5, null, "", "Jos näet tämän viestin, yritit hakea keskustelua jota ei ole olemassa"));
-                if (!redirect) {
-                    res.redirect("/");
-                    redirect = true;
-                }
+                res.redirect("/");
+                return new ModelAndView(new HashMap(), "uusialue");
             }
-            if (list.isEmpty() && !redirect) {
+            if (list.isEmpty()) {
                 res.redirect("/keskustelu/" + keskustelu_id + "?page=1");
-                redirect = true;
+                return new ModelAndView(new HashMap(), "uusialue");
             }
+
+            try {
+                map.put("keskustelu", list.get(0).getKeskustelu());
+                map.put("alue", list.get(0).getKeskustelu().getAlue());
+            } catch (Exception e) {
+                res.redirect("/");
+                return new ModelAndView(new HashMap(), "uusialue");
+            }
+
             map.put("sivunviestit", (sivunumero - 1) * viestienLkmSivulla);
             map.put("page", sivunumero);
             if (list.size() == viestienLkmSivulla + 1) {
